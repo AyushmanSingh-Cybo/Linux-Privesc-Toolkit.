@@ -1,0 +1,14 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Environment variables and secrets
+.env
+
+# Generated audit reports
+reports/security_audit.txt
+reports/security_audit.json
