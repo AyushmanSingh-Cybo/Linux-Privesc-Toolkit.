@@ -1,11 +1,11 @@
 
 def assess_risk(finding):
-    """Assign a preliminary security review priority, not exploitability."""
+    """Assign preliminary security review priority, not exploitability."""
 
     if not isinstance(finding, dict):
         finding = {
             "type": "Configuration review",
-            "details": str(finding)
+            "details": str(finding),
         }
 
     finding_type = str(finding.get("type", "")).lower()
@@ -16,7 +16,7 @@ def assess_risk(finding):
     text = f"{finding_type} {details} {path} {permissions}"
     score = 10
 
-    # Linux capabilities
+    # 1. Linux capabilities
     if "capability" in finding_type or "cap_" in text:
         score = 30
 
@@ -40,13 +40,11 @@ def assess_risk(finding):
         elif "cap_net_raw" in text:
             score = 25
 
-    # SUID/SGID: flag for review, but do not automatically call it High
+    # 2. SUID/SGID binaries
     elif "suid" in finding_type or "sgid" in finding_type:
         score = 35
 
-        # Common system executables still need verification, but their
-        # presence alone does not prove a security issue.
-        if any(name in path for name in (
+        common_system_paths = (
             "/usr/bin/sudo",
             "/usr/bin/su",
             "/usr/bin/passwd",
@@ -54,39 +52,57 @@ def assess_risk(finding):
             "/usr/bin/umount",
             "/usr/lib/openssh/ssh-keysign",
             "/usr/lib/dbus-1.0/dbus-daemon-launch-helper",
-        )):
+        )
+
+        if any(name in path for name in common_system_paths):
             score = 25
 
-    # Writable files and directories
+     # 3. Cron and scheduled tasks
+    elif "cron" in finding_type:
+        score = 25
+
+        if (
+            finding.get("writable_by_current_user") is True
+            or "writable" in details
+        ):
+            score = 65
+
+    # 4. World-writable files and directories
     elif "world-writable" in text or "world writable" in text:
         score = 55
+        
+
+    # 5. Other writable files and directories
     elif "writable" in finding_type or "writable" in details:
         score = 35
 
-    # Sudo configuration
+    # 6. Sudo configuration
     elif "sudo" in finding_type:
         score = 50
+
         if "nopasswd" in text or "no password" in text:
             score = 60
-        if "all" in text and ("nopasswd" in text or "no password" in text):
+
+        if "all" in text and (
+            "nopasswd" in text or "no password" in text
+        ):
             score = 80
 
-    # Scheduled tasks
-    elif "cron" in finding_type:
-        score = 25
-        if "writable" in text:
-            score = 65
-
-    # Exact overly permissive permission bits
+    # 7. Overly permissive permission bits
     if permissions in ("0o777", "0o1777", "777", "1777"):
         score = max(score, 60)
 
-    # Operational issues are not automatically vulnerabilities
-    if any(word in finding_type for word in ("warning", "error", "timeout")):
+    # 8. Scanner warnings and operational errors
+    if any(
+        word in finding_type
+        for word in ("warning", "error", "timeout")
+    ):
         score = 10
 
+    # Keep score between 0 and 100
     score = min(max(score, 0), 100)
 
+    # Assign severity
     if score >= 80:
         level = "Critical"
     elif score >= 60:
@@ -98,7 +114,7 @@ def assess_risk(finding):
 
     return {
         "risk_level": level,
-        "risk_score": score
+        "risk_score": score,
     }
 
 
@@ -113,7 +129,7 @@ def add_risk_scores(findings):
         else:
             item = {
                 "type": "Configuration review",
-                "details": str(finding)
+                "details": str(finding),
             }
 
         item.update(assess_risk(item))

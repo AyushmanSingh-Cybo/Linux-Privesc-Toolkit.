@@ -12,3 +12,14 @@ __pycache__/
 # Generated audit reports
 reports/security_audit.txt
 reports/security_audit.json
+# Python cache and virtual environment
+__pycache__/
+*.py[cod]
+.venv/
+
+# Temporary backups
+backups/
+*.bak
+# Generated audit reports
+reports/security_audit.json
+reports/security_audit.txt

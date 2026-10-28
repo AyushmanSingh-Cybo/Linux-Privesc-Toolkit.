@@ -3,6 +3,8 @@ import subprocess
 
 
 def scan_sudo():
+    """Inspect sudo permissions without prompting for a password."""
+
     print("[*] Checking current user's sudo permissions...")
 
     try:
@@ -10,26 +12,60 @@ def scan_sudo():
             ["sudo", "-n", "-l"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            check=False,
         )
 
         if result.returncode == 0:
-            print("[+] Sudo permissions:")
-            print(result.stdout.strip())
+            output = result.stdout.strip()
+            print("[+] Sudo permissions retrieved.")
 
-        elif result.returncode == 1:
-            print("[!] Sudo permissions could not be listed non-interactively.")
-            print("[*] The user may need to authenticate or may lack permission.")
-            if result.stderr.strip():
-                print(result.stderr.strip())
+            if output:
+                print(output)
 
+            return [{
+                "type": "Sudo permissions",
+                "details": output or "Command succeeded but returned no output",
+                "check_status": "completed",
+            }]
+
+        error_output = result.stderr.strip()
+
+        if "interactive authentication is required" in error_output.lower():
+            details = (
+                "Sudo permission check incomplete: "
+                "authentication is required."
+            )
         else:
-            print("[!] Sudo permission check returned an error.")
-            if result.stderr.strip():
-                print(result.stderr.strip())
+            details = (
+                "Sudo permission check failed. "
+                + (error_output or "No error details were provided.")
+            )
 
-        return result.stdout.strip()
+        print(f"[!] {details}")
 
-    except (OSError, subprocess.TimeoutExpired) as error:
-        print(f"[!] Scanner error: {error}")
-        return ""
+        return [{
+            "type": "Warning",
+            "details": details,
+            "check_status": "incomplete",
+        }]
+
+    except subprocess.TimeoutExpired:
+        details = "Sudo permission check timed out."
+        print(f"[!] {details}")
+
+        return [{
+            "type": "Warning",
+            "details": details,
+            "check_status": "incomplete",
+        }]
+
+    except OSError as error:
+        details = f"Could not run sudo permission check: {error}"
+        print(f"[!] {details}")
+
+        return [{
+            "type": "Warning",
+            "details": details,
+            "check_status": "incomplete",
+        }]
