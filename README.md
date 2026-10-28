@@ -2,17 +2,21 @@
 
 ## Overview
 
-The Linix Privilege Escalation Automation Toolkit is a Python-Based security auditing project designed to identify potentially risky Linux configuration and help prioritize manual security reviews.
+The Linux Privilege Escalation Automation Toolkit is a Python-based defensive security auditing project designed to identify potentially risky Linux configurations and help prioritize manual security reviews.
+
+It combines multiple configuration scanners, heuristic risk scoring, audit completeness tracking, and TXT/JSON report generation.
 
 ## Features
 
 - **SUID/SGID Scanner:** Identifies files with SUID or SGID permission bits.
-- **Files Permissions Scanner:** checks for potentially unsafe files permissions.
-- **Sudo Permissions Scanner:** Collects information about Sudo Permissions and configuration.
-- **Cron configuration Scanner:** Checks scheduled-task configurations for potential security concerns.
+- **File Permissions Scanner:** Checks for potentially unsafe file permissions.
+- **Sudo Permissions Scanner:** Reviews available sudo permission information and reports when authentication requirements prevent a complete check.
+- **Cron Configuration Scanner:** Inspects scheduled-task configurations and checks for potential security concerns.
 - **Linux Capabilities Scanner:** Identifies executables with assigned Linux capabilities using `getcap`.
-- **Risk Scoring Engine:** Assigns preliminary risk scores to collected findings.
-- **Report Generation:** Generates TXT and JSON audit reports.
+- **Risk Scoring Engine:** Assigns preliminary risk scores to help prioritize findings for manual review.
+- **Audit Status Tracking:** Reports audit completeness and incomplete checks.
+- **Report Generation:** Produces TXT and JSON audit reports.
+- **Automated Tests:** Includes unit tests for risk scoring, report generation, and sudo scanner behavior.
 
 ## Technology Stack
 
@@ -20,6 +24,7 @@ The Linix Privilege Escalation Automation Toolkit is a Python-Based security aud
 - Linux / Ubuntu on WSL
 - VS Code
 - Linux command-line utilities, including `getcap`
+- Python `unittest` for automated testing
 
 ## Project Structure
 
@@ -34,6 +39,10 @@ linux-privesc-toolkit/
 │   ├── sudo_checks.py
 │   ├── cron_checks.py
 │   └── capabilities.py
+├── tests/
+│   ├── test_report.py
+│   ├── test_risk_engine.py
+│   └── test_sudo_checks.py
 └── reports/
     ├── security_audit.txt
     └── security_audit.json
@@ -41,55 +50,68 @@ linux-privesc-toolkit/
 
 ## Setup and Usage
 
-1. Install Python 3 and the required Linux utilities.
-2. Open the project directory in Ubuntu or another supported Linux environment.
-3. Ensure the `getcap` utility is available. On Ubuntu, it is provided by `libcap2-bin`.
-4. Navigate to the project directory:
+### Prerequisites
 
-   ```bash
-   cd ~/linux-privesc-toolkit
-   ```
+1. Python 3
+2. A supported Linux environment, such as Ubuntu or Ubuntu on WSL
+3. The `getcap` utility, provided by `libcap2-bin` on Ubuntu
 
-5. Run the toolkit:
+### Run the Toolkit
 
-   ```bash
-   python3 main.py
-   ```
+```bash
+cd ~/linux-privesc-toolkit
+python3 main.py
+```
 
-6. Review the generated reports in the `reports/` directory.
+Review the generated TXT and JSON reports in the `reports/` directory.
+
+### Run Automated Tests
+
+```bash
+./.venv/bin/python -m unittest discover -s tests -v
+```
+
+The current test suite contains nine tests covering risk scoring, report generation, and sudo scanner behavior.
 
 ## Risk Scoring
 
-The risk engine assigns a preliminary score and severity label to each finding. Scores are intended to help prioritize manual investigation; they do not prove that a vulnerability is exploitable.
+The risk engine assigns preliminary numerical scores and severity labels to findings. These scores are heuristic review priorities, not measurements of exploitability.
 
-Findings should be reviewed in context, including file ownership, permissions, executable behavior, system configuration, and the intended use of Linux capabilities.
+A finding's actual significance depends on its context, including file ownership, permissions, executable behavior, system configuration, and the capabilities assigned to an executable.
 
-## Sample Result
+All findings should be manually reviewed before drawing conclusions about their security impact.
 
-```text
-Type: Linux capability
-Risk: Low
-Score: 10
-Details: /usr/bin/ping cap_net_raw=ep
-```
+## Audit Completeness
 
-This example illustrates a detected capability assignment. It is not automatically a vulnerability.
+The toolkit tracks whether checks completed successfully. A scan may be marked partial when a check cannot finish, such as when sudo authentication is required.
+
+An incomplete check should not be interpreted as evidence that the system is secure or insecure. Review the audit status and warnings alongside the findings.
+
+## Reports
+
+The toolkit generates:
+
+- `reports/security_audit.txt` — human-readable audit results.
+- `reports/security_audit.json` — structured findings for further analysis.
+
+Report contents depend on the scanned system, the current user's permissions, and which checks complete successfully.
 
 ## Limitations
 
-- Results depend on the permissions of the account running the toolkit and the system being scanned.
-- Filesystem scans may be incomplete or time out.
+- Scan results depend on the account running the toolkit and the target system.
+- Some checks may be incomplete because of permissions, authentication requirements, or environmental limitations.
 - Risk scores are heuristic estimates and may produce false positives or false negatives.
-- The toolkit does not establish exploitability or replace a professional security assessment.
-- Report consistency and scanner coverage should be tested across supported Linux environments.
+- Detected configuration findings do not automatically establish exploitability.
+- The toolkit does not replace a professional security assessment.
+- Scanner coverage and behavior should be validated across supported Linux environments.
 
 ## Future Improvements
 
-- More comprehensive risk rules and severity validation.
-- Improved scan error handling and coverage reporting.
-- Unit tests and automated regression tests.
-- Remediation recommendations for findings.
-- HTML reporting and a more detailed audit summary.
+- Broader scanner coverage and additional regression tests.
+- Improved error handling and validation across Linux distributions.
+- More detailed remediation guidance for individual findings.
+- Optional HTML reporting and richer audit summaries.
+- Further validation of risk-scoring rules against representative configurations.
 
 ## Disclaimer
 
@@ -98,7 +120,3 @@ This project is intended for authorized security auditing, defensive learning, a
 ## Author
 
 Ayushman Singh
-
-## Project Status
-
-Core scanners, preliminary risk scoring, and TXT/JSON report generation have been implemented. Further testing, documentation review, and validation are recommended before production use.
