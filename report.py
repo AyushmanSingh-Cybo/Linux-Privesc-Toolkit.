@@ -3,11 +3,10 @@ from datetime import datetime
 from pathlib import Path
 import json
 
-
-def generate_report(findings):
+def generate_report(findings, output_dir="reports"):
     """Generate TXT and JSON reports with an overall audit status."""
 
-    report_dir = Path("reports")
+    report_dir = Path(output_dir)
     report_dir.mkdir(parents=True, exist_ok=True)
 
     generated_at = datetime.now().astimezone().isoformat(

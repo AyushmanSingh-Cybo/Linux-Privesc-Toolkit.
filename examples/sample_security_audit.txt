@@ -1,0 +1,51 @@
+LINUX SECURITY AUDIT REPORT
+==================================================
+Generated: 2026-10-31T09:41:41+00:00
+Audit status: PARTIAL
+Total findings: 5
+Incomplete checks: 1
+
+WARNING: Some checks could not be completed.
+Review the incomplete findings before relying on this audit.
+
+FINDING #1
+------------------------------
+Type: SUID binary
+Path: /usr/bin/passwd
+Details: Common system SUID binary detected
+Permissions: 0o4755
+Risk Level: Low
+Risk Score: 25
+
+FINDING #2
+------------------------------
+Type: Linux capability
+Path: /usr/bin/ping
+Details: cap_net_raw=ep
+Risk Level: Low
+Risk Score: 25
+
+FINDING #3
+------------------------------
+Type: Cron check
+Path: /etc/cron.d/example-task
+Details: Example scheduled task
+Writable By Current User: True
+Risk Level: High
+Risk Score: 65
+
+FINDING #4
+------------------------------
+Type: Sudo configuration
+Details: Example NOPASSWD ALL configuration
+Risk Level: Critical
+Risk Score: 80
+
+FINDING #5
+------------------------------
+Type: Scanner warning
+Details: Sudo check requires authentication
+Check Status: incomplete
+Risk Level: Low
+Risk Score: 10
+

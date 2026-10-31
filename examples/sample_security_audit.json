@@ -1,0 +1,44 @@
+{
+    "generated_at": "2026-10-31T09:41:41+00:00",
+    "audit_status": "PARTIAL",
+    "total_findings": 5,
+    "incomplete_checks": 1,
+    "findings": [
+        {
+            "type": "SUID binary",
+            "path": "/usr/bin/passwd",
+            "details": "Common system SUID binary detected",
+            "permissions": "0o4755",
+            "risk_level": "Low",
+            "risk_score": 25
+        },
+        {
+            "type": "Linux capability",
+            "path": "/usr/bin/ping",
+            "details": "cap_net_raw=ep",
+            "risk_level": "Low",
+            "risk_score": 25
+        },
+        {
+            "type": "Cron check",
+            "path": "/etc/cron.d/example-task",
+            "details": "Example scheduled task",
+            "writable_by_current_user": true,
+            "risk_level": "High",
+            "risk_score": 65
+        },
+        {
+            "type": "Sudo configuration",
+            "details": "Example NOPASSWD ALL configuration",
+            "risk_level": "Critical",
+            "risk_score": 80
+        },
+        {
+            "type": "Scanner warning",
+            "details": "Sudo check requires authentication",
+            "check_status": "incomplete",
+            "risk_level": "Low",
+            "risk_score": 10
+        }
+    ]
+}
