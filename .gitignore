@@ -19,3 +19,9 @@ reports/security_audit.json
 
 # System files
 .DS_Store
+# Local development backups
+*.backup
+
+# Unexpected local Python entries
+/python3
+/python3.1

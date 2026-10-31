@@ -1,10 +1,64 @@
 
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 import json
 
+
+def get_recommendation(finding):
+    """Provide safe, general security review guidance."""
+    finding_type = str(finding.get("type", "")).lower()
+
+    if finding.get("check_status") == "incomplete":
+        return (
+            "This check could not be completed. Review the "
+            "reported limitation and rerun it with appropriate "
+            "authorization."
+        )
+
+    if "suid" in finding_type or "sgid" in finding_type:
+        return (
+            "Verify that the file's ownership and special "
+            "permissions are required. Compare them against "
+            "the trusted package or system baseline."
+        )
+
+    if "sudo" in finding_type:
+        return (
+            "Review sudo permissions and apply the principle "
+            "of least privilege. Confirm that each permitted "
+            "administrative action is necessary."
+        )
+
+    if "cron" in finding_type:
+        return (
+            "Review the scheduled task's ownership, permissions "
+            "and command. Ensure that unauthorized users cannot "
+            "modify privileged scheduled tasks."
+        )
+
+    if "capab" in finding_type:
+        return (
+            "Verify that the assigned Linux capabilities are "
+            "necessary for the application and remove unnecessary "
+            "privileges through approved configuration changes."
+        )
+
+    if "permission" in finding_type or "writable" in finding_type:
+        return (
+            "Review file ownership and write permissions. "
+            "Restrict unnecessary access according to the "
+            "system's operational requirements."
+        )
+
+    return (
+        "Review this configuration against the organization's "
+        "approved security baseline."
+    )
+
+
 def generate_report(findings, output_dir="reports"):
-    """Generate TXT and JSON reports with an overall audit status."""
+    """Generate readable TXT and structured JSON audit reports."""
 
     report_dir = Path(output_dir)
     report_dir.mkdir(parents=True, exist_ok=True)
@@ -13,7 +67,6 @@ def generate_report(findings, output_dir="reports"):
         timespec="seconds"
     )
 
-    # Normalize findings for consistent reporting.
     normalized_findings = []
 
     for finding in findings:
@@ -25,7 +78,6 @@ def generate_report(findings, output_dir="reports"):
                 "details": str(finding),
             })
 
-    # Determine whether all checks completed.
     incomplete_checks = [
         finding
         for finding in normalized_findings
@@ -34,51 +86,103 @@ def generate_report(findings, output_dir="reports"):
 
     audit_status = "PARTIAL" if incomplete_checks else "COMPLETE"
 
-    # Text report
+    severity_counts = Counter(
+        finding.get("risk_level", "Unknown")
+        for finding in normalized_findings
+    )
+
+    preferred_keys = [
+        "type",
+        "path",
+        "details",
+        "owner",
+        "permissions",
+        "writable_by_current_user",
+        "check_status",
+        "risk_level",
+        "risk_score",
+    ]
+
     text_file = report_dir / "security_audit.txt"
 
     with text_file.open("w", encoding="utf-8") as file:
-        file.write("LINUX SECURITY AUDIT REPORT\n")
-        file.write("=" * 50 + "\n")
-        file.write(f"Generated: {generated_at}\n")
-        file.write(f"Audit status: {audit_status}\n")
-        file.write(f"Total findings: {len(normalized_findings)}\n")
-        file.write(f"Incomplete checks: {len(incomplete_checks)}\n\n")
+        file.write("=" * 62 + "\n")
+        file.write("                 LINUX SECURITY AUDIT REPORT\n")
+        file.write("=" * 62 + "\n")
+        file.write("Automated Linux Configuration Security Review\n")
+        file.write("Version: 1.0\n")
+        file.write("Author: Ayushman Singh\n")
+        file.write(f"Generated: {generated_at}\n\n")
+
+        file.write("1. EXECUTIVE SUMMARY\n")
+        file.write("-" * 62 + "\n")
+        file.write(f"Audit status       : {audit_status}\n")
+        file.write(f"Total findings     : {len(normalized_findings)}\n")
+        file.write(f"Incomplete checks  : {len(incomplete_checks)}\n\n")
+
+        file.write("2. SEVERITY BREAKDOWN\n")
+        file.write("-" * 62 + "\n")
+
+        for level in ["Low", "Medium", "High", "Critical"]:
+            file.write(
+                f"{level:<12}: {severity_counts[level]}\n"
+            )
+
+        if severity_counts["Unknown"]:
+            file.write(
+                f"Unknown     : {severity_counts['Unknown']}\n"
+            )
+
+        file.write("\n")
 
         if incomplete_checks:
-            file.write("WARNING: Some checks could not be completed.\n")
-            file.write("Review the incomplete findings before relying on this audit.\n\n")
+            file.write("3. AUDIT COMPLETENESS WARNING\n")
+            file.write("-" * 62 + "\n")
+            file.write(
+                "Some checks could not be completed. "
+                "The results represent a partial audit.\n"
+                "Review incomplete checks before relying "
+                "on the report.\n\n"
+            )
+
+        file.write("4. DETAILED SECURITY FINDINGS\n")
+        file.write("-" * 62 + "\n\n")
+
+        if not normalized_findings:
+            file.write("No findings were collected.\n\n")
 
         for number, finding in enumerate(normalized_findings, start=1):
             file.write(f"FINDING #{number}\n")
-            file.write("-" * 30 + "\n")
-
-            preferred_keys = [
-                "type",
-                "path",
-                "details",
-                "owner",
-                "permissions",
-                "writable_by_current_user",
-                "check_status",
-                "risk_level",
-                "risk_score",
-            ]
+            file.write("-" * 40 + "\n")
 
             for key in preferred_keys:
                 if key in finding:
                     label = key.replace("_", " ").title()
                     file.write(f"{label}: {finding[key]}\n")
 
-            # Include extra fields added by scanners.
             for key, value in finding.items():
                 if key not in preferred_keys:
                     label = key.replace("_", " ").title()
                     file.write(f"{label}: {value}\n")
 
-            file.write("\n")
+            file.write(
+                "Recommendation: "
+                + get_recommendation(finding)
+                + "\n\n"
+            )
 
-    # JSON report
+        file.write("5. LIMITATIONS AND DISCLAIMER\n")
+        file.write("-" * 62 + "\n")
+        file.write(
+            "Risk scores indicate preliminary review priorities, "
+            "not confirmed vulnerabilities.\n"
+            "The toolkit does not establish exploitability, "
+            "and the scan does not guarantee system security.\n"
+            "Only authorized systems should be assessed.\n"
+            "Manual validation is recommended before making "
+            "configuration changes.\n"
+        )
+
     json_file = report_dir / "security_audit.json"
 
     report_data = {
