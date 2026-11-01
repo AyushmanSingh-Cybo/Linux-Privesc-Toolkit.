@@ -129,11 +129,11 @@ The terminal displays progress, a severity breakdown, incomplete-check informati
 
 ### Toolkit Overview
 
-![Linux Security Audit Toolkit](screenshots/toolkit-overview.png.png)
+![Linux Security Audit Toolkit](screenshots/toolkit-overview.png)
 
 ### Security Audit Summary
 
-![Security Audit Summary](screenshots/security-audit.png)
+![Security Audit Summary](screenshots/audit-summary.png)
 ## Example Audit Summary
 
 The following is an example from a development-environment audit. Results vary across systems.
