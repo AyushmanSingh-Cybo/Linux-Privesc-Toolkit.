@@ -2,11 +2,17 @@
 from collections import Counter
 from datetime import datetime
 
+from scanners.system_info import (
+    collect_system_info,
+    print_system_info,
+)
 from scanners.suid_sgid import scan_suid_sgid
 from scanners.permissions import scan_permissions
 from scanners.sudo_checks import scan_sudo
 from scanners.cron_checks import scan_cron
 from scanners.capabilities import scan_capabilities
+from scanners.services import scan_services
+from scanners.kernel_security import assess_kernel_security
 
 from risk_engine import add_risk_scores
 from report import generate_report
@@ -21,11 +27,16 @@ class Colors:
     RESET = "\033[0m"
 
 
+TOTAL_SCANNERS = 7
+
+
 def print_header():
     print("\n" + "=" * 62)
-    print(f"{Colors.CYAN}{Colors.BOLD}"
-          "          LINUX SECURITY AUDIT TOOLKIT"
-          f"{Colors.RESET}")
+    print(
+        f"{Colors.CYAN}{Colors.BOLD}"
+        "          LINUX SECURITY AUDIT TOOLKIT"
+        f"{Colors.RESET}"
+    )
     print("=" * 62)
     print("  Automated Linux Configuration Security Review")
     print("  Version: 1.0 | Author: Ayushman Singh")
@@ -34,12 +45,26 @@ def print_header():
 
 
 def print_section(number, name):
-    print(f"\n{Colors.CYAN}[{number}/5] {name}{Colors.RESET}")
+    print(
+        f"\n{Colors.CYAN}"
+        f"[{number}/{TOTAL_SCANNERS}] {name}"
+        f"{Colors.RESET}"
+    )
     print("-" * 62)
 
 
 def main():
     print_header()
+
+    print(
+        f"\n{Colors.CYAN}{Colors.BOLD}"
+        "[+] SYSTEM INFORMATION"
+        f"{Colors.RESET}"
+    )
+    print("-" * 62)
+
+    system_info = collect_system_info()
+    print_system_info(system_info)
 
     print_section(1, "SUID/SGID Scanner")
     suid_findings = scan_suid_sgid()
@@ -56,7 +81,10 @@ def main():
         sudo_findings = sudo_result
     elif isinstance(sudo_result, str) and sudo_result:
         sudo_findings = [
-            {"type": "Sudo check output", "path": sudo_result}
+            {
+                "type": "Sudo check output",
+                "path": sudo_result,
+            }
         ]
     else:
         sudo_findings = []
@@ -71,43 +99,80 @@ def main():
     capability_findings = scan_capabilities()
     print(f"[+] Findings collected: {len(capability_findings)}")
 
+    print_section(6, "Systemd Service Security Scanner")
+    service_findings = scan_services()
+    print(f"[+] Findings collected: {len(service_findings)}")
+
+    print_section(7, "Kernel Security Assessment")
+    kernel_finding = assess_kernel_security()
+    kernel_findings = [kernel_finding]
+    print(
+        f"[+] Kernel version: "
+        f"{kernel_finding['kernel_version']}"
+    )
+    print(
+        f"[+] CVE status: "
+        f"{kernel_finding['cve_status']}"
+    )
+    print(f"[+] Findings collected: {len(kernel_findings)}")
+
     all_findings = (
         suid_findings
         + permission_findings
         + sudo_findings
         + cron_findings
         + capability_findings
+        + service_findings
+        + kernel_findings
     )
 
     all_findings = add_risk_scores(all_findings)
 
-    generate_report(all_findings)
+    generate_report(
+        all_findings,
+        system_info=system_info
+    )
 
     severity_counts = Counter(
         finding.get("risk_level", "Unknown")
         for finding in all_findings
     )
 
-
     incomplete_checks = sum(
-        1 for finding in all_findings
+        1
+        for finding in all_findings
         if finding.get("check_status") == "incomplete"
     )
 
-    audit_status = "PARTIAL" if incomplete_checks else "COMPLETE"
-
-
-    audit_status = "PARTIAL" if incomplete_checks else "COMPLETE"
+    audit_status = (
+        "PARTIAL" if incomplete_checks else "COMPLETE"
+    )
 
     print("\n" + "=" * 62)
-    print(f"{Colors.BOLD}                 SECURITY AUDIT SUMMARY{Colors.RESET}")
+    print(
+        f"{Colors.BOLD}"
+        "                 SECURITY AUDIT SUMMARY"
+        f"{Colors.RESET}"
+    )
     print("=" * 62)
 
     print(f"  Total findings : {len(all_findings)}")
-    print(f"  Low            : {Colors.GREEN}{severity_counts['Low']}{Colors.RESET}")
-    print(f"  Medium         : {Colors.YELLOW}{severity_counts['Medium']}{Colors.RESET}")
-    print(f"  High           : {Colors.RED}{severity_counts['High']}{Colors.RESET}")
-    print(f"  Critical       : {Colors.RED}{severity_counts['Critical']}{Colors.RESET}")
+    print(
+        f"  Low            : "
+        f"{Colors.GREEN}{severity_counts['Low']}{Colors.RESET}"
+    )
+    print(
+        f"  Medium         : "
+        f"{Colors.YELLOW}{severity_counts['Medium']}{Colors.RESET}"
+    )
+    print(
+        f"  High           : "
+        f"{Colors.RED}{severity_counts['High']}{Colors.RESET}"
+    )
+    print(
+        f"  Critical       : "
+        f"{Colors.RED}{severity_counts['Critical']}{Colors.RESET}"
+    )
     print(f"  Incomplete     : {incomplete_checks}")
     print(f"  Audit status   : {audit_status}")
 
@@ -117,8 +182,15 @@ def main():
     print("    reports/security_audit.json")
     print("=" * 62)
 
-    print(f"\n{Colors.GREEN}[+] Security audit finished.{Colors.RESET}")
-    print("Note: Findings are review priorities, not confirmed vulnerabilities.\n")
+    print(
+        f"\n{Colors.GREEN}"
+        "[+] Security audit finished."
+        f"{Colors.RESET}"
+    )
+    print(
+        "Note: Findings are review priorities, "
+        "not confirmed vulnerabilities.\n"
+    )
 
 
 if __name__ == "__main__":

@@ -57,8 +57,8 @@ def get_recommendation(finding):
     )
 
 
-def generate_report(findings, output_dir="reports"):
-    """Generate readable TXT and structured JSON audit reports."""
+def generate_report(findings, output_dir="reports", system_info=None):
+    """Generate TXT and JSON security audit reports."""
 
     report_dir = Path(output_dir)
     report_dir.mkdir(parents=True, exist_ok=True)
@@ -103,6 +103,8 @@ def generate_report(findings, output_dir="reports"):
         "risk_score",
     ]
 
+    system_info = dict(system_info) if system_info else {}
+
     text_file = report_dir / "security_audit.txt"
 
     with text_file.open("w", encoding="utf-8") as file:
@@ -120,13 +122,42 @@ def generate_report(findings, output_dir="reports"):
         file.write(f"Total findings     : {len(normalized_findings)}\n")
         file.write(f"Incomplete checks  : {len(incomplete_checks)}\n\n")
 
-        file.write("2. SEVERITY BREAKDOWN\n")
+        file.write("2. SYSTEM INFORMATION\n")
+        file.write("-" * 62 + "\n")
+
+        if system_info:
+            labels = {
+                "username": "Username",
+                "uid": "User ID",
+                "gid": "Group ID",
+                "groups": "Groups",
+                "operating_system": "Operating System",
+                "kernel_version": "Kernel Version",
+                "architecture": "Architecture",
+                "is_root": "Running as Root",
+            }
+
+            for key, label in labels.items():
+                if key in system_info:
+                    value = system_info[key]
+
+                    if isinstance(value, list):
+                        value = ", ".join(map(str, value))
+
+                    if isinstance(value, bool):
+                        value = "Yes" if value else "No"
+
+                    file.write(f"{label:<20}: {value}\n")
+        else:
+            file.write("System information not provided.\n")
+
+        file.write("\n")
+
+        file.write("3. SEVERITY BREAKDOWN\n")
         file.write("-" * 62 + "\n")
 
         for level in ["Low", "Medium", "High", "Critical"]:
-            file.write(
-                f"{level:<12}: {severity_counts[level]}\n"
-            )
+            file.write(f"{level:<12}: {severity_counts[level]}\n")
 
         if severity_counts["Unknown"]:
             file.write(
@@ -136,7 +167,7 @@ def generate_report(findings, output_dir="reports"):
         file.write("\n")
 
         if incomplete_checks:
-            file.write("3. AUDIT COMPLETENESS WARNING\n")
+            file.write("4. AUDIT COMPLETENESS WARNING\n")
             file.write("-" * 62 + "\n")
             file.write(
                 "Some checks could not be completed. "
@@ -145,7 +176,7 @@ def generate_report(findings, output_dir="reports"):
                 "on the report.\n\n"
             )
 
-        file.write("4. DETAILED SECURITY FINDINGS\n")
+        file.write("5. DETAILED SECURITY FINDINGS\n")
         file.write("-" * 62 + "\n\n")
 
         if not normalized_findings:
@@ -171,7 +202,7 @@ def generate_report(findings, output_dir="reports"):
                 + "\n\n"
             )
 
-        file.write("5. LIMITATIONS AND DISCLAIMER\n")
+        file.write("6. LIMITATIONS AND DISCLAIMER\n")
         file.write("-" * 62 + "\n")
         file.write(
             "Risk scores indicate preliminary review priorities, "
@@ -187,6 +218,7 @@ def generate_report(findings, output_dir="reports"):
 
     report_data = {
         "generated_at": generated_at,
+        "system_information": system_info,
         "audit_status": audit_status,
         "total_findings": len(normalized_findings),
         "incomplete_checks": len(incomplete_checks),
