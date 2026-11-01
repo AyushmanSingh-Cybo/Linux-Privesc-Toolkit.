@@ -2,9 +2,9 @@
 # Linux Privilege Escalation Automation Toolkit
 ## Technical Internship Project Report
 
-**Prepared by:** Ayushman Singh  
-**Project Version:** 1.0  
-**Technology:** Python 3, Linux, Ubuntu, WSL2  
+**Prepared by:** Ayushman Singh
+**Project Version:** 1.0
+**Technology:** Python 3, Linux, Ubuntu, WSL2
 **Report Date:** November 2026
 
 ---
